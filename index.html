@@ -382,21 +382,21 @@ const PER_COLORS = ['#4f8ef7','#6ee7b7','#f97316','#c084fc','#f43f5e'];
 // ─────────────────────────────────────────
 //  DATA
 // ─────────────────────────────────────────
-const SK = 'flotaapp_v3';
+const SK = 'flotaapp_v4';
 let DB = (() => {
   try { const r = localStorage.getItem(SK); if(r) return JSON.parse(r); } catch(e){}
   return {
     vehicles:[
-      {id:'v1',name:'Peugeot 308',plate:'1234 ABC',year:2021,review:'2024-12-01',km:48000,itv:'2026-03-10',maintenance:'2025-07-15',technicianId:'p2'},
-      {id:'v2',name:'Renault Kadjar',plate:'5678 DEF',year:2020,review:'2025-03-15',km:72000,itv:'2025-09-20',maintenance:'2025-08-01',technicianId:'p2'},
-      {id:'v3',name:'Ford Transit',plate:'9012 GHI',year:2019,review:'2025-06-30',km:110000,itv:'2025-11-05',maintenance:'2025-06-10',technicianId:'p2'},
+      {id:'v1',name:'Kangoo',plate:'1234 ABC',year:2007,review:'2027-02-01',km:null,itv:'2027-02-10',maintenance:'2027-07-15',technicianId:'p2'},
+      {id:'v2',name:'Duster',plate:'5678 DEF',year:2022,review:'2027-01-15',km:85000,itv:'2027-06-20',maintenance:'2027-01-14',technicianId:'p2'},
+      {id:'v3',name:'Suzuki',plate:'9012 GHI',year:2019,review:'2027-01-30',km:110000,itv:'2027-01-05',maintenance:'2027-01-10',technicianId:'p2'},
     ],
     people:[
-      {id:'p1',name:'Carlos López',role:'Comercial',email:'carlos@empresa.com'},
-      {id:'p2',name:'Ana Martínez',role:'Técnico',email:'ana@empresa.com'},
-      {id:'p3',name:'Javier Ruiz',role:'Logística',email:'javier@empresa.com'},
-      {id:'p4',name:'Laura Sánchez',role:'Administración',email:'laura@empresa.com'},
-      {id:'p5',name:'Miguel Torres',role:'Dirección',email:'miguel@empresa.com'},
+      {id:'p1',name:'Igor',role:'Técnico',email:''},
+      {id:'p2',name:'Manu',role:'Técnico',email:''},
+      {id:'p3',name:'Pablo',role:'Técnico',email:''},
+      {id:'p4',name:'Nahia',role:'Técnico',email:''},
+      {id:'p5',name:'Xabi',role:'Técnico',email:''},
     ],
     reservations:[]
   };
