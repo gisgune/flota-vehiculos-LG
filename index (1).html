@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlotaApp — Gestión de Vehículos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #0f1117;
+  --surf:    #181c27;
+  --card:    #1e2333;
+  --bord:    #2a3048;
+  --accent:  #4f8ef7;
+  --green:   #6ee7b7;
+  --warn:    #f97316;
+  --danger:  #f43f5e;
+  --text:    #e8eaf0;
+  --muted:   #7c839e;
+  --radius:  10px;
+  --v0: #4f8ef7; --v1: #6ee7b7; --v2: #f97316; --v3: #c084fc;
+  --pc0:#4f8ef7;--pc1:#6ee7b7;--pc2:#f97316;--pc3:#c084fc;--pc4:#f43f5e;
+  /* Horario laboral */
+  --day-start: 8;
+  --day-end:   16;
+  --day-hours: 8; /* end - start */
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:15px}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+
+/* HEADER */
+header{display:flex;align-items:center;justify-content:space-between;padding:0 1.5rem;height:56px;background:var(--surf);border-bottom:1px solid var(--bord);position:sticky;top:0;z-index:100}
+.logo{font-weight:600;font-size:1.05rem;letter-spacing:-.3px}.logo span{color:var(--accent)}
+nav{display:flex;gap:.25rem}
+nav button{background:none;border:none;cursor:pointer;color:var(--muted);font-family:inherit;font-size:.85rem;padding:.4rem .85rem;border-radius:6px;transition:all .15s}
+nav button.active,nav button:hover{background:var(--card);color:var(--text)}
+nav button.active{color:var(--accent)}
+.btn-icon{background:var(--card);border:1px solid var(--bord);color:var(--text);border-radius:8px;padding:.4rem .9rem;cursor:pointer;font-size:.82rem;font-family:inherit;font-weight:500;transition:background .15s}
+.btn-icon:hover{background:var(--bord)}
+
+/* LAYOUT */
+main{padding:1.25rem;max-width:1200px;margin:0 auto}
+.page{display:none}.page.active{display:block}
+
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--bord);border-radius:var(--radius);padding:1.25rem}
+
+/* ════════════════════════════════════════
+   CALENDARIO HORARIO  (8-16h)
+════════════════════════════════════════ */
+.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;gap:.75rem;flex-wrap:wrap}
+.cal-nav{display:flex;gap:.4rem;align-items:center}
+.cal-nav button{background:var(--card);border:1px solid var(--bord);color:var(--text);border-radius:6px;width:30px;height:30px;cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.cal-nav button:hover{background:var(--bord)}
+.cal-week{font-size:.85rem;color:var(--muted);font-variant-numeric:tabular-nums;min-width:130px;text-align:center}
+.view-toggle{display:flex;background:var(--surf);border-radius:7px;padding:3px;border:1px solid var(--bord)}
+.view-toggle button{background:none;border:none;color:var(--muted);font-family:inherit;font-size:.78rem;padding:.3rem .75rem;border-radius:5px;cursor:pointer;transition:all .15s}
+.view-toggle button.active{background:var(--card);color:var(--text)}
+
+/* Leyenda vehículos */
+.veh-legend{display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:.75rem}
+.vleg-item{display:flex;align-items:center;gap:.35rem;font-size:.75rem;color:var(--muted)}
+.vleg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+/* ── TIMELINE WEEK ── */
+.tl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tl-grid{display:grid;grid-template-columns:60px repeat(7,1fr);min-width:680px}
+
+/* cabeceras de día */
+.tl-corner{height:44px;background:transparent}
+.tl-day-head{height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-bottom:1px solid var(--bord);font-size:.75rem;color:var(--muted);font-weight:500;text-transform:capitalize;padding:.25rem}
+.tl-day-head strong{font-size:.95rem;font-weight:600;color:var(--text)}
+.tl-day-head.today{color:var(--accent)}.tl-day-head.today strong{color:var(--accent)}
+
+/* columna de horas */
+.tl-hour-col{display:flex;flex-direction:column}
+.tl-hour-label{height:52px;display:flex;align-items:flex-start;justify-content:flex-end;padding:0 8px 0 0;font-size:.7rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:-9px;user-select:none}
+
+/* celdas de día */
+.tl-day-col{position:relative;border-left:1px solid var(--bord)}
+/* líneas horizontales de hora */
+.tl-hline{position:absolute;left:0;right:0;height:1px;background:var(--bord);opacity:.5}
+.tl-hline.half{opacity:.25;border-top:1px dashed var(--bord);background:transparent}
+/* línea de hora actual */
+.tl-now-line{position:absolute;left:0;right:0;height:2px;background:var(--accent);z-index:10;border-radius:1px;opacity:.9}
+.tl-now-line::before{content:'';position:absolute;left:-3px;top:-3px;width:8px;height:8px;background:var(--accent);border-radius:50%}
+
+/* celda vacía clicable */
+.tl-day-bg{position:absolute;inset:0;cursor:pointer;z-index:1}
+.tl-day-bg:hover{background:rgba(79,142,247,.04)}
+
+/* bloques de reserva */
+.res-block{position:absolute;left:4px;right:4px;border-radius:6px;padding:3px 6px;cursor:pointer;z-index:5;overflow:hidden;transition:filter .15s,transform .1s;border:1px solid rgba(255,255,255,.1);min-height:22px}
+.res-block:hover{filter:brightness(1.15);transform:scaleX(.98);z-index:6}
+.res-block-name{font-size:.7rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff}
+.res-block-time{font-size:.62rem;color:rgba(255,255,255,.75);font-family:'DM Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* línea de cierre 16:00 */
+.tl-hline.final{opacity:.7;background:var(--bord)}
+.tl-offhours{position:absolute;left:0;right:0;background:repeating-linear-gradient(45deg,rgba(0,0,0,.0),rgba(0,0,0,.0) 6px,rgba(0,0,0,.12) 6px,rgba(0,0,0,.12) 12px);pointer-events:none;z-index:2}
+
+/* ── MONTH GRID ── */
+.month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.mg-head{text-align:center;font-size:.7rem;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding:.4rem 0}
+.mg-day{background:var(--surf);border:1px solid var(--bord);border-radius:8px;min-height:80px;padding:.4rem;cursor:pointer;transition:border-color .15s;position:relative}
+.mg-day:hover{border-color:var(--accent)}
+.mg-day.other-month{opacity:.35}
+.mg-day.today{border-color:var(--accent)}
+.mg-day-num{font-size:.72rem;font-weight:500;margin-bottom:.3rem;color:var(--muted)}
+.mg-day.today .mg-day-num{color:var(--accent)}
+.mg-chip{font-size:.6rem;padding:2px 5px;border-radius:3px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff;font-weight:500}
+
+/* ── TABLES ── */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.83rem}
+th{text-align:left;font-size:.68rem;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:var(--muted);padding:.6rem 1rem;border-bottom:1px solid var(--bord)}
+td{padding:.75rem 1rem;border-bottom:1px solid var(--bord);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:.2rem .6rem;border-radius:20px;font-size:.72rem;font-weight:500;gap:.3rem}
+.badge.active{background:rgba(110,231,183,.12);color:var(--green)}
+.badge.pending{background:rgba(249,115,22,.12);color:var(--warn)}
+.badge.done{background:rgba(124,131,158,.12);color:var(--muted)}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:.35rem}
+
+/* BTNS */
+.btn{display:inline-flex;align-items:center;gap:.4rem;padding:.45rem 1rem;border-radius:7px;font-family:inherit;font-size:.83rem;font-weight:500;cursor:pointer;border:none;transition:all .15s}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:#3a7de8}
+.btn-sm{padding:.3rem .65rem;font-size:.75rem;border-radius:6px}
+.btn-ghost{background:none;border:1px solid var(--bord);color:var(--muted)}.btn-ghost:hover{border-color:var(--accent);color:var(--text)}
+.btn-danger{background:rgba(244,63,94,.12);color:var(--danger);border:1px solid transparent}.btn-danger:hover{background:rgba(244,63,94,.2)}
+
+/* MODAL */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.overlay.open{display:flex}
+.modal{background:var(--card);border:1px solid var(--bord);border-radius:14px;padding:1.75rem;width:min(480px,94vw);box-shadow:0 20px 60px rgba(0,0,0,.6);position:relative}
+.modal h3{font-size:1rem;font-weight:600;margin-bottom:1.25rem}
+.modal-close{position:absolute;top:1rem;right:1rem;background:var(--surf);border:1px solid var(--bord);color:var(--muted);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center}
+.modal-close:hover{color:var(--text)}
+
+/* FORM */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+.form-group{display:flex;flex-direction:column;gap:.35rem;margin-bottom:.75rem}
+.form-group label{font-size:.75rem;color:var(--muted);font-weight:500}
+.form-group input,.form-group select,.form-group textarea{background:var(--surf);border:1px solid var(--bord);color:var(--text);border-radius:7px;padding:.5rem .75rem;font-family:inherit;font-size:.85rem;transition:border-color .15s;outline:none}
+.form-group input:focus,.form-group select:focus{border-color:var(--accent)}
+.form-group select option{background:var(--card)}
+.modal-actions{display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem}
+.conflict-msg{background:rgba(244,63,94,.1);border:1px solid var(--danger);border-radius:7px;padding:.6rem .85rem;font-size:.8rem;color:var(--danger);margin-bottom:.75rem;display:none}
+.conflict-msg.show{display:block}
+
+/* VEHICLES PAGE */
+.veh-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem}
+.veh-card{background:var(--card);border:1px solid var(--bord);border-radius:var(--radius);padding:1.25rem;display:flex;flex-direction:column;gap:.6rem;position:relative;overflow:hidden;transition:border-color .15s}
+.veh-card:hover{border-color:var(--accent)}
+.veh-card-name{font-size:.95rem;font-weight:600}
+.veh-plate{font-family:'DM Mono',monospace;background:var(--surf);border:1px solid var(--bord);border-radius:5px;padding:.15rem .5rem;font-size:.78rem;color:var(--muted)}
+.veh-meta{font-size:.78rem;color:var(--muted);display:flex;flex-direction:column;gap:.2rem}
+
+/* PEOPLE */
+.people-list{display:flex;flex-direction:column;gap:.5rem}
+.person-row{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;background:var(--surf);border:1px solid var(--bord);border-radius:8px;transition:border-color .15s}
+.person-row:hover{border-color:var(--accent)}
+.person-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:600;color:#fff;flex-shrink:0}
+.person-info{display:flex;align-items:center;gap:.75rem}
+.person-name{font-size:.9rem;font-weight:500}
+.person-role{font-size:.75rem;color:var(--muted)}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.75rem;margin-bottom:1.5rem}
+.stat-card{background:var(--card);border:1px solid var(--bord);border-radius:var(--radius);padding:1rem;display:flex;flex-direction:column;gap:.25rem}
+.stat-card .val{font-size:1.6rem;font-weight:600;line-height:1}
+.stat-card .lbl{font-size:.75rem;color:var(--muted)}
+
+/* PAGE HEADER */
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem}
+.page-header h1{font-size:1.1rem;font-weight:600}
+.empty{text-align:center;padding:3rem 1rem;color:var(--muted);font-size:.9rem}
+
+/* MOBILE */
+.mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--surf);border-top:1px solid var(--bord);z-index:100;padding:.5rem .5rem .75rem;justify-content:space-around}
+.mobile-nav button{background:none;border:none;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:.2rem;font-family:inherit;font-size:.65rem;cursor:pointer;padding:.35rem .6rem;border-radius:8px;transition:all .15s}
+.mobile-nav button.active{color:var(--accent)}
+.mobile-nav .icon{font-size:1.2rem}
+
+/* ── ALERT BANNER ── */
+#alert-banner{display:none;background:var(--surf);border-bottom:1px solid var(--bord);padding:.6rem 1.5rem;gap:.75rem;flex-wrap:wrap;align-items:center}
+#alert-banner.has-alerts{display:flex}
+.alert-item{display:flex;align-items:center;gap:.5rem;padding:.35rem .75rem;border-radius:7px;font-size:.78rem;cursor:pointer;transition:filter .15s;flex-shrink:0}
+.alert-item:hover{filter:brightness(1.1)}
+.alert-item.critical{background:rgba(244,63,94,.12);border:1px solid rgba(244,63,94,.3);color:#f87171}
+.alert-item.warning{background:rgba(249,115,22,.12);border:1px solid rgba(249,115,22,.3);color:#fb923c}
+.alert-banner-label{font-size:.72rem;color:var(--muted);font-weight:500;flex-shrink:0}
+.alert-dismiss{margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:.8rem;padding:.2rem .4rem;border-radius:4px;flex-shrink:0}
+.alert-dismiss:hover{color:var(--text)}
+
+@media(max-width:640px){
+  header nav{display:none}
+  .mobile-nav{display:flex}
+  main{padding:1rem .75rem;padding-bottom:5.5rem}
+  .form-row{grid-template-columns:1fr}
+  .stats-grid{grid-template-columns:1fr 1fr}
+  .tl-grid{min-width:560px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Flota<span>App</span></div>
+  <nav>
+    <button class="active" data-page="calendar">📅 Calendario</button>
+    <button data-page="reservations">🚗 Reservas</button>
+    <button data-page="vehicles">🔧 Vehículos</button>
+    <button data-page="people">👤 Personas</button>
+  </nav>
+  <div>
+    <button class="btn-icon" id="btn-new-reserva">+ Reserva</button>
+  </div>
+</header>
+
+<!-- BANNER DE ALERTAS (aparece automáticamente si hay fechas próximas/vencidas) -->
+<div id="alert-banner">
+  <span class="alert-banner-label">🔔 Alertas:</span>
+  <div id="alert-items" style="display:flex;gap:.5rem;flex-wrap:wrap;flex:1"></div>
+  <button class="alert-dismiss" onclick="dismissAlerts()" title="Ocultar hasta mañana">✕ Ocultar</button>
+</div>
+
+<nav class="mobile-nav">
+  <button class="active" data-page="calendar"><span class="icon">📅</span>Calendario</button>
+  <button data-page="reservations"><span class="icon">🚗</span>Reservas</button>
+  <button data-page="vehicles"><span class="icon">🔧</span>Vehículos</button>
+  <button data-page="people"><span class="icon">👤</span>Personas</button>
+</nav>
+
+<main>
+
+<!-- ═══ CALENDAR ═══ -->
+<div class="page active" id="page-calendar">
+  <div class="cal-header">
+    <div class="cal-nav">
+      <button id="cal-prev">‹</button>
+      <span class="cal-week" id="cal-label"></span>
+      <button id="cal-next">›</button>
+      <button id="cal-today" class="btn btn-ghost btn-sm" style="width:auto;height:auto">Hoy</button>
+    </div>
+    <div class="view-toggle">
+      <button class="active" data-view="week">Semana</button>
+      <button data-view="month">Mes</button>
+    </div>
+  </div>
+  <div class="veh-legend" id="veh-legend"></div>
+  <div class="card" style="padding:.75rem;overflow:hidden">
+    <div id="cal-content"></div>
+  </div>
+</div>
+
+<!-- ═══ RESERVATIONS ═══ -->
+<div class="page" id="page-reservations">
+  <div class="page-header">
+    <h1>Reservas</h1>
+    <button class="btn btn-primary" onclick="openReservationModal()">+ Nueva reserva</button>
+  </div>
+  <div class="stats-grid" id="stats-grid"></div>
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Vehículo</th><th>Persona</th><th>Inicio</th><th>Fin</th><th>Estado</th><th>Notas</th><th></th></tr></thead>
+        <tbody id="res-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ VEHICLES ═══ -->
+<div class="page" id="page-vehicles">
+  <div class="page-header">
+    <h1>Vehículos</h1>
+    <button class="btn btn-primary" onclick="openVehicleModal()">+ Añadir vehículo</button>
+  </div>
+  <div class="veh-grid" id="veh-grid"></div>
+</div>
+
+<!-- ═══ PEOPLE ═══ -->
+<div class="page" id="page-people">
+  <div class="page-header">
+    <h1>Personas</h1>
+    <button class="btn btn-primary" onclick="openPersonModal()">+ Añadir persona</button>
+  </div>
+  <div class="card">
+    <div class="people-list" id="people-list"></div>
+  </div>
+</div>
+
+</main>
+
+<!-- ═══ MODALS ═══ -->
+<div class="overlay" id="modal-reservation">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-reservation')">✕</button>
+    <h3 id="modal-res-title">Nueva Reserva</h3>
+    <div class="conflict-msg" id="conflict-msg"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Vehículo</label><select id="res-vehicle"></select></div>
+      <div class="form-group"><label>Persona</label><select id="res-person"></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Inicio</label><input type="datetime-local" id="res-start"></div>
+      <div class="form-group"><label>Fin</label><input type="datetime-local" id="res-end"></div>
+    </div>
+    <div class="form-group"><label>Destino / Notas</label><input type="text" id="res-notes" placeholder="p.ej. Visita cliente Madrid"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-reservation')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveReservation()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="modal-vehicle">
+  <div class="modal" style="width:min(540px,94vw)">
+    <button class="modal-close" onclick="closeModal('modal-vehicle')">✕</button>
+    <h3 id="modal-veh-title">Vehículo</h3>
+    <div class="form-group"><label>Nombre / Modelo</label><input type="text" id="veh-name" placeholder="p.ej. Peugeot 308"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Matrícula</label><input type="text" id="veh-plate" placeholder="1234 ABC"></div>
+      <div class="form-group"><label>Año</label><input type="number" id="veh-year" placeholder="2022" min="1990" max="2030"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Km actuales</label><input type="number" id="veh-km" placeholder="45000"></div>
+      <div class="form-group"><label>Técnico asignado</label><select id="veh-technician"><option value="">— Sin asignar —</option></select></div>
+    </div>
+    <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin:.5rem 0 .6rem;font-weight:500">Fechas de seguimiento</div>
+    <div class="form-row">
+      <div class="form-group"><label>📋 Próx. revisión</label><input type="date" id="veh-review"></div>
+      <div class="form-group"><label>🔍 Próx. ITV</label><input type="date" id="veh-itv"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>🔧 Próx. mantenimiento</label><input type="date" id="veh-maintenance"></div>
+      <div class="form-group"><label>📝 Notas mantenimiento</label><input type="text" id="veh-maintenance-notes" placeholder="p.ej. Cambio aceite + filtros"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-vehicle')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveVehicle()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+
+<div class="overlay" id="modal-person">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-person')">✕</button>
+    <h3 id="modal-person-title">Persona</h3>
+    <div class="form-group"><label>Nombre completo</label><input type="text" id="person-name" placeholder="p.ej. María García"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Rol / Departamento</label><input type="text" id="person-role" placeholder="p.ej. Técnico"></div>
+      <div class="form-group"><label>Email</label><input type="email" id="person-email" placeholder="nombre@empresa.com"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-person')">Cancelar</button>
+      <button class="btn btn-primary" onclick="savePerson()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────
+//  CONSTANTS
+// ─────────────────────────────────────────
+const DAY_START = 8;   // primera hora visible
+const DAY_END   = 16;  // última hora (fin de jornada)
+const SLOT_H    = 52;  // px por hora
+// +SLOT_H para que la etiqueta 16:00 quede visible con su línea de cierre
+const DAY_PX    = (DAY_END - DAY_START + 1) * SLOT_H;
+
+const VEH_COLORS = ['#4f8ef7','#6ee7b7','#f97316','#c084fc'];
+const PER_COLORS = ['#4f8ef7','#6ee7b7','#f97316','#c084fc','#f43f5e'];
+
+// ─────────────────────────────────────────
+//  DATA
+// ─────────────────────────────────────────
+const SK = 'flotaapp_v3';
+let DB = (() => {
+  try { const r = localStorage.getItem(SK); if(r) return JSON.parse(r); } catch(e){}
+  return {
+    vehicles:[
+      {id:'v1',name:'Peugeot 308',plate:'1234 ABC',year:2021,review:'2024-12-01',km:48000,itv:'2026-03-10',maintenance:'2025-07-15',technicianId:'p2'},
+      {id:'v2',name:'Renault Kadjar',plate:'5678 DEF',year:2020,review:'2025-03-15',km:72000,itv:'2025-09-20',maintenance:'2025-08-01',technicianId:'p2'},
+      {id:'v3',name:'Ford Transit',plate:'9012 GHI',year:2019,review:'2025-06-30',km:110000,itv:'2025-11-05',maintenance:'2025-06-10',technicianId:'p2'},
+    ],
+    people:[
+      {id:'p1',name:'Carlos López',role:'Comercial',email:'carlos@empresa.com'},
+      {id:'p2',name:'Ana Martínez',role:'Técnico',email:'ana@empresa.com'},
+      {id:'p3',name:'Javier Ruiz',role:'Logística',email:'javier@empresa.com'},
+      {id:'p4',name:'Laura Sánchez',role:'Administración',email:'laura@empresa.com'},
+      {id:'p5',name:'Miguel Torres',role:'Dirección',email:'miguel@empresa.com'},
+    ],
+    reservations:[]
+  };
+})();
+function save(){ localStorage.setItem(SK, JSON.stringify(DB)); }
+
+// ─────────────────────────────────────────
+//  HELPERS
+// ─────────────────────────────────────────
+function vehIdx(id){ return DB.vehicles.findIndex(v=>v.id===id); }
+function vehColor(id){ return VEH_COLORS[vehIdx(id) % VEH_COLORS.length] || '#888'; }
+function vehColorAlpha(id,a){ const c=vehColor(id); return c+'28'; } // approx alpha
+function vehName(id){ return DB.vehicles.find(v=>v.id===id)?.name||'—'; }
+function personName(id){ return DB.people.find(p=>p.id===id)?.name||'—'; }
+function personInitials(n){ return n.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase(); }
+
+function fmtDate(s){ if(!s)return''; return new Date(s).toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'}); }
+function fmtDT(s){ if(!s)return''; return new Date(s).toLocaleString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
+function fmtTime(s){ if(!s)return''; return new Date(s).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}); }
+function isoLocal(d){ const off=d.getTimezoneOffset(); return new Date(d-off*60000).toISOString().slice(0,16); }
+function startOfWeek(d){ const x=new Date(d); const dow=(x.getDay()+6)%7; x.setDate(x.getDate()-dow); x.setHours(0,0,0,0); return x; }
+
+// Convierte hora (0-24) a px dentro de la columna
+function hourToPx(h){
+  const clamped = Math.min(Math.max(h, DAY_START), DAY_END);
+  return (clamped - DAY_START) * SLOT_H;
+}
+// Convierte Date a px
+function dateToPx(d){
+  const h = d.getHours() + d.getMinutes()/60;
+  return hourToPx(h);
+}
+// Obtiene hora real del cursor relativo a la columna
+function pxToHour(px){ return DAY_START + px / SLOT_H; }
+
+// ─────────────────────────────────────────
+//  NAVIGATION
+// ─────────────────────────────────────────
+let currentPage = 'calendar';
+document.querySelectorAll('[data-page]').forEach(b=>{
+  b.addEventListener('click',()=>switchPage(b.dataset.page));
+});
+document.getElementById('btn-new-reserva').addEventListener('click',()=>openReservationModal());
+
+function switchPage(name){
+  currentPage = name;
+  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='page-'+name));
+  document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===name));
+  renderPage(name);
+}
+function renderPage(name){
+  if(name==='calendar')     renderCalendar();
+  if(name==='reservations') renderReservations();
+  if(name==='vehicles')     renderVehicles();
+  if(name==='people')       renderPeople();
+}
+
+// ─────────────────────────────────────────
+//  CALENDAR CONTROLS
+// ─────────────────────────────────────────
+let calDate = new Date();
+let calView = 'week';
+
+document.getElementById('cal-prev').addEventListener('click',()=>shiftCal(-1));
+document.getElementById('cal-next').addEventListener('click',()=>shiftCal(+1));
+document.getElementById('cal-today').addEventListener('click',()=>{calDate=new Date();renderCalendar();});
+document.querySelectorAll('.view-toggle button').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('.view-toggle button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    calView = b.dataset.view;
+    renderCalendar();
+  });
+});
+
+function shiftCal(dir){
+  if(calView==='week') calDate.setDate(calDate.getDate()+dir*7);
+  else calDate.setMonth(calDate.getMonth()+dir);
+  renderCalendar();
+}
+
+function renderCalendar(){
+  renderLegend();
+  if(calView==='week') renderWeekTimeline();
+  else renderMonth();
+}
+
+function renderLegend(){
+  document.getElementById('veh-legend').innerHTML = DB.vehicles.map(v=>`
+    <div class="vleg-item">
+      <span class="vleg-dot" style="background:${vehColor(v.id)}"></span>
+      ${v.name} · <span style="font-family:'DM Mono',monospace;font-size:.72rem">${v.plate}</span>
+    </div>
+  `).join('');
+}
+
+// ─────────────────────────────────────────
+//  WEEK TIMELINE  (8-16h)
+// ─────────────────────────────────────────
+function renderWeekTimeline(){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayH = new Date();  // para línea de hora actual
+  const mon   = startOfWeek(new Date(calDate));
+  const days  = Array.from({length:7},(_,i)=>{ const d=new Date(mon); d.setDate(d.getDate()+i); return d; });
+  const DAYS_ES = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+
+  document.getElementById('cal-label').textContent =
+    mon.toLocaleDateString('es-ES',{day:'numeric',month:'long'}) + ' – ' +
+    days[6].toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'});
+
+  const hours = [];
+  for(let h = DAY_START; h <= DAY_END; h++) hours.push(h);
+
+  // ── cabeceras
+  let html = `<div class="tl-wrap"><div class="tl-grid">`;
+  html += `<div class="tl-corner"></div>`;
+  days.forEach((d,i)=>{
+    const isToday = d.getTime()===today.getTime();
+    html += `<div class="tl-day-head${isToday?' today':''}">
+      <span>${DAYS_ES[i]}</span>
+      <strong>${d.getDate()}</strong>
+    </div>`;
+  });
+
+  // ── columna de horas + columnas de días
+  html += `<div class="tl-hour-col">`;
+  hours.forEach(h=>{
+    html += `<div class="tl-hour-label">${h}:00</div>`;
+  });
+  html += `</div>`;  // fin tl-hour-col
+
+  // ── 7 columnas de días
+  days.forEach((d,di)=>{
+    const isToday = d.getTime()===today.getTime();
+    const dayIso  = d.toISOString().slice(0,10);
+    const dayStart0 = new Date(d); dayStart0.setHours(0,0,0,0);
+    const dayEnd23  = new Date(d); dayEnd23.setHours(23,59,59,999);
+
+    // reservas de este día
+    const dayRes = DB.reservations.filter(r=>{
+      if(r.vehicleId===undefined && r.vehicleId===null) return false;
+      const rs=new Date(r.start), re=new Date(r.end);
+      return rs<=dayEnd23 && re>=dayStart0;
+    });
+
+    html += `<div class="tl-day-col" style="height:${DAY_PX}px">`;
+
+    // fondo clicable
+    html += `<div class="tl-day-bg" onclick="handleTimelineClick('${v_escape(dayIso)}',event,this)" title="Clic para nueva reserva"></div>`;
+
+    // líneas de hora (incluida la línea de cierre a las 16:00)
+    hours.forEach((h,hi)=>{
+      const topPx = hi * SLOT_H;
+      html += `<div class="tl-hline${h===DAY_END?' final':''}" style="top:${topPx}px"></div>`;
+      if(h < DAY_END){
+        html += `<div class="tl-hline half" style="top:${topPx + SLOT_H/2}px"></div>`;
+      }
+    });
+
+    // línea hora actual (solo hoy)
+    if(isToday){
+      const nowH = todayH.getHours() + todayH.getMinutes()/60;
+      if(nowH >= DAY_START && nowH <= DAY_END){
+        const nowPx = hourToPx(nowH);
+        html += `<div class="tl-now-line" style="top:${nowPx}px"></div>`;
+      }
+    }
+
+    // bloques de reserva
+    dayRes.forEach(r=>{
+      const rs = new Date(r.start), re = new Date(r.end);
+      const startH = rs.getHours() + rs.getMinutes()/60;
+      const endH   = re.getHours() + re.getMinutes()/60;
+
+      // Clampear a horario laboral para el render
+      const visStart = Math.max(startH, DAY_START);
+      const visEnd   = Math.min(endH,   DAY_END);
+      if(visEnd <= visStart) return; // fuera de horario, no renderizar
+
+      const topPx  = hourToPx(visStart);
+      const botPx  = hourToPx(visEnd);
+      const heightPx = Math.max(botPx - topPx, 20);
+
+      const color  = vehColor(r.vehicleId);
+      const person = personName(r.personId);
+      const vName  = vehName(r.vehicleId).split(' ')[0];
+      // Número de vehículos que se solapan en el mismo tramo → calcular offset X
+      const overlapIndex = calcOverlapIndex(r, dayRes);
+      const totalOverlap = countOverlap(r, dayRes);
+      const colW = totalOverlap > 1 ? `calc((100% - 8px) / ${totalOverlap})` : 'calc(100% - 8px)';
+      const colL = totalOverlap > 1 ? `calc(4px + ${overlapIndex} * (100% - 8px) / ${totalOverlap})` : '4px';
+
+      html += `<div class="res-block"
+        style="top:${topPx}px;height:${heightPx}px;left:${colL};width:${colW};background:${color};opacity:.92"
+        onclick="event.stopPropagation();editReservation('${r.id}')"
+        title="${vName} · ${person}\n${fmtTime(r.start)} – ${fmtTime(r.end)}">
+        <div class="res-block-name">${person.split(' ')[0]} · ${vName}</div>
+        ${heightPx>38 ? `<div class="res-block-time">${fmtTime(r.start)}–${fmtTime(r.end)}</div>` : ''}
+      </div>`;
+    });
+
+    html += `</div>`; // fin tl-day-col
+  });
+
+  html += `</div></div>`; // fin tl-grid, tl-wrap
+  document.getElementById('cal-content').innerHTML = html;
+
+  // Scroll automático a hora actual o inicio de jornada
+  const wrap = document.querySelector('.tl-wrap');
+  if(wrap){
+    const now = new Date();
+    const scrollToH = (now.getHours() >= DAY_START && now.getHours() <= DAY_END) ? now.getHours() - 1 : DAY_START;
+    wrap.scrollTop = hourToPx(scrollToH) + 44;
+  }
+}
+
+// Evitar que caracteres especiales rompan el HTML
+function v_escape(s){ return s.replace(/'/g,"&#39;"); }
+
+// Calcular cuántos bloques se superponen en un tramo horario dado
+function countOverlap(res, allRes){
+  return allRes.filter(r2=>r2.id!==res.id && blocksOverlap(res,r2) && r2.vehicleId!==res.vehicleId).length + 1;
+}
+function calcOverlapIndex(res, allRes){
+  const others = allRes.filter(r2=>r2.id!==res.id && blocksOverlap(res,r2) && r2.vehicleId!==res.vehicleId);
+  // ordenar por vehículo para posición consistente
+  const all = [res,...others].sort((a,b)=>a.vehicleId.localeCompare(b.vehicleId));
+  return all.findIndex(x=>x.id===res.id);
+}
+function blocksOverlap(a,b){
+  return new Date(a.start) < new Date(b.end) && new Date(a.end) > new Date(b.start);
+}
+
+// Click en fondo → nueva reserva con hora aproximada
+function handleTimelineClick(dayIso, event, el){
+  const rect = el.getBoundingClientRect();
+  const relY  = event.clientY - rect.top;
+  const hour  = DAY_START + relY / SLOT_H;
+  const hFloor = Math.max(DAY_START, Math.min(DAY_END - 1, Math.floor(hour)));
+  const d = new Date(dayIso);
+  d.setHours(hFloor, 0, 0, 0);
+  const e = new Date(d); e.setHours(hFloor + 1);
+  openReservationModal(null, null, isoLocal(d), isoLocal(e));
+}
+
+// ─────────────────────────────────────────
+//  MONTH GRID
+// ─────────────────────────────────────────
+function renderMonth(){
+  const y=calDate.getFullYear(), m=calDate.getMonth();
+  const first=new Date(y,m,1), last=new Date(y,m+1,0);
+  const today=new Date(); today.setHours(0,0,0,0);
+  document.getElementById('cal-label').textContent =
+    first.toLocaleDateString('es-ES',{month:'long',year:'numeric'});
+  const startDow=(first.getDay()+6)%7;
+  const total=Math.ceil((startDow+last.getDate())/7)*7;
+  const DAYS_ES=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+  let html=`<div class="month-grid">`;
+  DAYS_ES.forEach(d=>{ html+=`<div class="mg-head">${d}</div>`; });
+  for(let i=0;i<total;i++){
+    const off=i-startDow+1;
+    const d=new Date(y,m,off); d.setHours(0,0,0,0);
+    const inM=d.getMonth()===m, isT=d.getTime()===today.getTime();
+    const dayIso=d.toISOString().slice(0,10);
+    const dayEnd=new Date(d); dayEnd.setHours(23,59,59,999);
+    const res=DB.reservations.filter(r=>{
+      const rs=new Date(r.start),re=new Date(r.end);
+      return rs<=dayEnd && re>=d;
+    });
+    html+=`<div class="mg-day${!inM?' other-month':''}${isT?' today':''}" onclick="handleMonthCellClick('${dayIso}')">
+      <div class="mg-day-num">${d.getDate()}</div>`;
+    res.slice(0,3).forEach(r=>{
+      const c=vehColor(r.vehicleId);
+      html+=`<div class="mg-chip" style="background:${c}" onclick="event.stopPropagation();editReservation('${r.id}')" title="${vehName(r.vehicleId)} · ${personName(r.personId)}">${vehName(r.vehicleId).split(' ')[0]} · ${personName(r.personId).split(' ')[0]}</div>`;
+    });
+    if(res.length>3) html+=`<div style="font-size:.6rem;color:var(--muted)">+${res.length-3} más</div>`;
+    html+=`</div>`;
+  }
+  html+=`</div>`;
+  document.getElementById('cal-content').innerHTML=html;
+}
+
+function handleMonthCellClick(dayIso){
+  const d=new Date(dayIso); d.setHours(8,0,0,0);
+  const e=new Date(dayIso); e.setHours(16,0,0,0);
+  openReservationModal(null,null,isoLocal(d),isoLocal(e));
+}
+
+// ─────────────────────────────────────────
+//  RESERVATIONS PAGE
+// ─────────────────────────────────────────
+function renderReservations(){
+  renderStats();
+  const sorted=[...DB.reservations].sort((a,b)=>new Date(b.start)-new Date(a.start));
+  const tbody=document.getElementById('res-tbody');
+  if(!sorted.length){
+    tbody.innerHTML='<tr><td colspan="7"><div class="empty">Sin reservas aún. ¡Crea la primera!</div></td></tr>';
+    return;
+  }
+  const now=new Date();
+  tbody.innerHTML=sorted.map(r=>{
+    const c=vehColor(r.vehicleId);
+    const s=new Date(r.start),e=new Date(r.end);
+    let st='pending',sl='Pendiente';
+    if(now>=s&&now<=e){st='active';sl='En uso';}
+    if(now>e||r.done){st='done';sl='Completada';}
+    return `<tr>
+      <td><span style="display:flex;align-items:center;gap:.45rem"><span class="dot" style="background:${c}"></span>${vehName(r.vehicleId)}</span></td>
+      <td>${personName(r.personId)}</td>
+      <td style="font-size:.8rem;color:var(--muted)">${fmtDT(r.start)}</td>
+      <td style="font-size:.8rem;color:var(--muted)">${fmtDT(r.end)}</td>
+      <td><span class="badge ${st}">${sl}</span></td>
+      <td style="font-size:.8rem;color:var(--muted);max-width:120px;overflow:hidden;text-overflow:ellipsis">${r.notes||'—'}</td>
+      <td>
+        <button class="btn btn-sm btn-ghost" onclick="editReservation('${r.id}')">✏</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteReservation('${r.id}')">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function renderStats(){
+  const now=new Date();
+  const inUse=DB.reservations.filter(r=>{const s=new Date(r.start),e=new Date(r.end);return now>=s&&now<=e&&!r.done;}).length;
+  const t0=new Date();t0.setHours(0,0,0,0);
+  const t23=new Date();t23.setHours(23,59,59,999);
+  const todayC=DB.reservations.filter(r=>{const s=new Date(r.start),e=new Date(r.end);return s<=t23&&e>=t0;}).length;
+  document.getElementById('stats-grid').innerHTML=`
+    <div class="stat-card"><div class="val" style="color:var(--accent)">${inUse}</div><div class="lbl">En uso ahora</div></div>
+    <div class="stat-card"><div class="val">${DB.vehicles.length-inUse}</div><div class="lbl">Disponibles</div></div>
+    <div class="stat-card"><div class="val" style="color:var(--green)">${todayC}</div><div class="lbl">Reservas hoy</div></div>
+    <div class="stat-card"><div class="val">${DB.reservations.length}</div><div class="lbl">Total reservas</div></div>`;
+}
+
+// ─────────────────────────────────────────
+//  VEHICLES PAGE
+// ─────────────────────────────────────────
+function renderVehicles(){
+  const grid=document.getElementById('veh-grid');
+  if(!DB.vehicles.length){grid.innerHTML='<div class="empty">Sin vehículos.</div>';return;}
+  const now=new Date();
+  const WARN_DAYS = 30; // aviso si queda menos de 30 días
+  function daysLeft(dateStr){
+    if(!dateStr) return null;
+    return Math.ceil((new Date(dateStr) - now) / 86400000);
+  }
+  function dateStatus(dateStr){
+    const d = daysLeft(dateStr);
+    if(d===null) return '';
+    if(d < 0)  return 'expired';
+    if(d <= WARN_DAYS) return 'soon';
+    return 'ok';
+  }
+  function dateBadge(label, dateStr){
+    if(!dateStr) return '';
+    const st = dateStatus(dateStr);
+    const d  = daysLeft(dateStr);
+    const icon = st==='expired' ? '🔴' : st==='soon' ? '🟠' : '🟢';
+    const col  = st==='expired' ? 'var(--danger)' : st==='soon' ? 'var(--warn)' : 'var(--green)';
+    const note = st==='expired' ? ' (vencida)' : st==='soon' ? ` (${d}d)` : '';
+    return `<span style="color:${col};display:flex;align-items:center;gap:.3rem">${icon} <b style="font-weight:500">${label}:</b> ${fmtDate(dateStr)}${note}</span>`;
+  }
+  grid.innerHTML=DB.vehicles.map(v=>{
+    const c=vehColor(v.id);
+    const inUse=DB.reservations.some(r=>{const s=new Date(r.start),e=new Date(r.end);return r.vehicleId===v.id&&now>=s&&now<=e&&!r.done;});
+    const tech = v.technicianId ? DB.people.find(p=>p.id===v.technicianId) : null;
+    const anyAlert = ['itv','maintenance','review'].some(f=>['expired','soon'].includes(dateStatus(v[f])));
+    return `<div class="veh-card">
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${c}"></div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:.5rem">
+        <div>
+          <div class="veh-card-name">${v.name}</div>
+          <div style="margin-top:.25rem;display:flex;gap:.4rem;flex-wrap:wrap">
+            <span class="veh-plate">${v.plate}</span>
+            ${v.year?`<span class="veh-plate">${v.year}</span>`:''}
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.3rem">
+          <span class="badge ${inUse?'active':'done'}">${inUse?'En uso':'Libre'}</span>
+          ${anyAlert?`<span class="badge pending" style="font-size:.65rem">⚠ Alerta</span>`:''}
+        </div>
+      </div>
+      <div class="veh-meta" style="gap:.4rem;margin-top:.25rem">
+        ${v.km?`<span>📍 Km: ${v.km.toLocaleString('es-ES')}</span>`:''}
+        ${dateBadge('ITV', v.itv)}
+        ${dateBadge('Mantenimiento', v.maintenance)}
+        ${dateBadge('Revisión', v.review)}
+      </div>
+      ${tech?`<div style="display:flex;align-items:center;gap:.5rem;padding:.5rem .6rem;background:var(--surf);border-radius:6px;border:1px solid var(--bord);margin-top:.25rem">
+        <div style="width:26px;height:26px;border-radius:50%;background:${PER_COLORS[DB.people.indexOf(tech)%PER_COLORS.length]};display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:600;color:#fff">${personInitials(tech.name)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.75rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${tech.name}</div>
+          <div style="font-size:.68rem;color:var(--muted)">Técnico asignado</div>
+        </div>
+        <button class="btn btn-sm btn-ghost" onclick="sendReminderEmail('${v.id}')" title="Enviar recordatorio por email" style="padding:.3rem .5rem;font-size:.8rem">📧</button>
+      </div>`:`<div style="font-size:.75rem;color:var(--muted);padding:.35rem 0">Sin técnico asignado</div>`}
+      <div style="display:flex;gap:.4rem;margin-top:.35rem">
+        <button class="btn btn-sm btn-ghost" onclick="editVehicle('${v.id}')">✏ Editar</button>
+        <button class="btn btn-sm btn-ghost" onclick="sendReminderEmail('${v.id}')">📧 Recordatorio</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteVehicle('${v.id}')">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────
+//  PEOPLE PAGE
+// ─────────────────────────────────────────
+function renderPeople(){
+  const list=document.getElementById('people-list');
+  if(!DB.people.length){list.innerHTML='<div class="empty">Sin personas.</div>';return;}
+  list.innerHTML=DB.people.map((p,i)=>{
+    const c=PER_COLORS[i%PER_COLORS.length];
+    return `<div class="person-row">
+      <div class="person-info">
+        <div class="person-avatar" style="background:${c}">${personInitials(p.name)}</div>
+        <div><div class="person-name">${p.name}</div><div class="person-role">${p.role||'—'}${p.email?` · <span style="font-family:'DM Mono',monospace;font-size:.68rem">${p.email}</span>`:''}</div></div>
+      </div>
+      <div style="display:flex;gap:.4rem">
+        <button class="btn btn-sm btn-ghost" onclick="editPerson('${p.id}')">✏</button>
+        <button class="btn btn-sm btn-danger" onclick="deletePerson('${p.id}')">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────
+//  MODALS
+// ─────────────────────────────────────────
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.overlay').forEach(o=>{
+  o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('open'); });
+});
+
+// ─────────────────────────────────────────
+//  RESERVATION CRUD
+// ─────────────────────────────────────────
+let editingResId = null;
+
+function populateSelects(){
+  document.getElementById('res-vehicle').innerHTML = DB.vehicles.map(v=>`<option value="${v.id}">${v.name} (${v.plate})</option>`).join('');
+  document.getElementById('res-person').innerHTML  = DB.people.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+}
+
+function openReservationModal(id=null, vehId=null, startVal=null, endVal=null){
+  editingResId = id;
+  document.getElementById('modal-res-title').textContent = id?'Editar Reserva':'Nueva Reserva';
+  document.getElementById('conflict-msg').classList.remove('show');
+  populateSelects();
+  if(id){
+    const r=DB.reservations.find(x=>x.id===id);
+    document.getElementById('res-vehicle').value = r.vehicleId;
+    document.getElementById('res-person').value  = r.personId;
+    document.getElementById('res-start').value   = r.start;
+    document.getElementById('res-end').value     = r.end;
+    document.getElementById('res-notes').value   = r.notes||'';
+  } else {
+    const now=new Date(); now.setMinutes(0,0,0);
+    const later=new Date(now); later.setHours(later.getHours()+1);
+    document.getElementById('res-start').value = startVal||isoLocal(now);
+    document.getElementById('res-end').value   = endVal  ||isoLocal(later);
+    document.getElementById('res-notes').value = '';
+    if(vehId) document.getElementById('res-vehicle').value = vehId;
+  }
+  openModal('modal-reservation');
+}
+
+function saveReservation(){
+  const vehicleId = document.getElementById('res-vehicle').value;
+  const personId  = document.getElementById('res-person').value;
+  const start     = document.getElementById('res-start').value;
+  const end       = document.getElementById('res-end').value;
+  const notes     = document.getElementById('res-notes').value;
+  const cm        = document.getElementById('conflict-msg');
+  if(!vehicleId||!personId||!start||!end) return;
+  if(new Date(start)>=new Date(end)){
+    cm.textContent='⚠ La fecha de fin debe ser posterior al inicio.';
+    cm.classList.add('show'); return;
+  }
+  const conflict=DB.reservations.some(r=>{
+    if(r.vehicleId!==vehicleId||r.id===editingResId) return false;
+    return new Date(start)<new Date(r.end) && new Date(end)>new Date(r.start);
+  });
+  if(conflict){ cm.textContent='⚠ Vehículo ya reservado en ese horario.'; cm.classList.add('show'); return; }
+  if(editingResId){
+    Object.assign(DB.reservations.find(x=>x.id===editingResId),{vehicleId,personId,start,end,notes});
+  } else {
+    DB.reservations.push({id:'r'+Date.now(),vehicleId,personId,start,end,notes,done:false});
+  }
+  save(); closeModal('modal-reservation'); renderPage(currentPage);
+}
+
+function editReservation(id){ switchPage('reservations'); setTimeout(()=>openReservationModal(id),50); }
+function deleteReservation(id){
+  if(!confirm('¿Eliminar esta reserva?')) return;
+  DB.reservations=DB.reservations.filter(r=>r.id!==id);
+  save(); renderPage(currentPage);
+}
+
+// ─────────────────────────────────────────
+//  VEHICLE CRUD
+// ─────────────────────────────────────────
+let editingVehId = null;
+function openVehicleModal(id=null){
+  editingVehId=id;
+  document.getElementById('modal-veh-title').textContent=id?'Editar Vehículo':'Nuevo Vehículo';
+  // Poblar select de técnicos
+  const techSel = document.getElementById('veh-technician');
+  techSel.innerHTML = `<option value="">— Sin asignar —</option>` +
+    DB.people.map(p=>`<option value="${p.id}">${p.name} (${p.role||'—'})</option>`).join('');
+  if(id){
+    const v=DB.vehicles.find(x=>x.id===id);
+    document.getElementById('veh-name').value=v.name||'';
+    document.getElementById('veh-plate').value=v.plate||'';
+    document.getElementById('veh-year').value=v.year||'';
+    document.getElementById('veh-km').value=v.km||'';
+    document.getElementById('veh-review').value=v.review||'';
+    document.getElementById('veh-itv').value=v.itv||'';
+    document.getElementById('veh-maintenance').value=v.maintenance||'';
+    document.getElementById('veh-maintenance-notes').value=v.maintenanceNotes||'';
+    document.getElementById('veh-technician').value=v.technicianId||'';
+  } else {
+    ['veh-name','veh-plate','veh-year','veh-km','veh-review','veh-itv','veh-maintenance','veh-maintenance-notes'].forEach(f=>document.getElementById(f).value='');
+    document.getElementById('veh-technician').value='';
+  }
+  openModal('modal-vehicle');
+}
+function editVehicle(id){ openVehicleModal(id); }
+function saveVehicle(){
+  const name=document.getElementById('veh-name').value.trim();
+  const plate=document.getElementById('veh-plate').value.trim();
+  const year=parseInt(document.getElementById('veh-year').value)||null;
+  const review=document.getElementById('veh-review').value||null;
+  const itv=document.getElementById('veh-itv').value||null;
+  const maintenance=document.getElementById('veh-maintenance').value||null;
+  const maintenanceNotes=document.getElementById('veh-maintenance-notes').value.trim()||null;
+  const km=parseInt(document.getElementById('veh-km').value)||null;
+  const technicianId=document.getElementById('veh-technician').value||null;
+  if(!name||!plate) return;
+  if(editingVehId){ Object.assign(DB.vehicles.find(x=>x.id===editingVehId),{name,plate,year,review,itv,maintenance,maintenanceNotes,km,technicianId}); }
+  else { DB.vehicles.push({id:'v'+Date.now(),name,plate,year,review,itv,maintenance,maintenanceNotes,km,technicianId}); }
+  save(); closeModal('modal-vehicle'); renderVehicles();
+}
+function deleteVehicle(id){
+  if(!confirm('¿Eliminar vehículo? Se eliminarán sus reservas.')) return;
+  DB.vehicles=DB.vehicles.filter(v=>v.id!==id);
+  DB.reservations=DB.reservations.filter(r=>r.vehicleId!==id);
+  save(); renderVehicles();
+}
+
+// ─────────────────────────────────────────
+//  RECORDATORIO EMAIL (mailto directo)
+// ─────────────────────────────────────────
+function sendReminderEmail(vehId){
+  const v   = DB.vehicles.find(x=>x.id===vehId);
+  const tech = v.technicianId ? DB.people.find(p=>p.id===v.technicianId) : null;
+  const to  = tech?.email || '';
+  const now = new Date();
+
+  function dLine(label, dateStr){
+    if(!dateStr) return '';
+    const days = Math.ceil((new Date(dateStr) - now) / 86400000);
+    const stato = days < 0
+      ? `VENCIDA hace ${Math.abs(days)} días`
+      : days === 0 ? 'VENCE HOY'
+      : `En ${days} días (${fmtDate(dateStr)})`;
+    return `  • ${label}: ${stato}`;
+  }
+
+  const lines = [
+    dLine('ITV',                  v.itv),
+    dLine('Mantenimiento previsto', v.maintenance),
+    dLine('Revisión general',      v.review),
+  ].filter(Boolean);
+
+  if(!lines.length){
+    alert('Este vehículo no tiene fechas de ITV, mantenimiento ni revisión configuradas.');
+    return;
+  }
+
+  const subject = `Recordatorio de mantenimiento: ${v.name} (${v.plate})`;
+  const body =
+`Hola${tech ? ' '+tech.name : ''},
+
+Te escribo para recordarte las próximas fechas de mantenimiento del vehículo:
+
+  🚗 ${v.name} — ${v.plate}${v.km ? '  |  ' + v.km.toLocaleString('es-ES') + ' km' : ''}
+
+${lines.join('\n')}
+${v.maintenanceNotes ? '\nNotas: ' + v.maintenanceNotes : ''}
+
+Por favor confirma que tienes esto anotado o avisa si necesitas reprogramar alguna cita.
+
+Gracias,
+FlotaApp`;
+
+  window.location.href =
+    `mailto:${encodeURIComponent(to)}`+
+    `?subject=${encodeURIComponent(subject)}`+
+    `&body=${encodeURIComponent(body)}`;
+}
+
+// ─────────────────────────────────────────
+//  PERSON CRUD
+// ─────────────────────────────────────────
+let editingPersonId=null;
+function openPersonModal(id=null){
+  editingPersonId=id;
+  document.getElementById('modal-person-title').textContent=id?'Editar Persona':'Nueva Persona';
+  if(id){
+    const p=DB.people.find(x=>x.id===id);
+    document.getElementById('person-name').value=p.name;
+    document.getElementById('person-role').value=p.role||'';
+    document.getElementById('person-email').value=p.email||'';
+  } else {
+    document.getElementById('person-name').value='';
+    document.getElementById('person-role').value='';
+    document.getElementById('person-email').value='';
+  }
+  openModal('modal-person');
+}
+function editPerson(id){ openPersonModal(id); }
+function savePerson(){
+  const name=document.getElementById('person-name').value.trim();
+  const role=document.getElementById('person-role').value.trim();
+  const email=document.getElementById('person-email').value.trim();
+  if(!name) return;
+  if(editingPersonId){ Object.assign(DB.people.find(x=>x.id===editingPersonId),{name,role,email}); }
+  else { DB.people.push({id:'p'+Date.now(),name,role,email}); }
+  save(); closeModal('modal-person'); renderPeople();
+}
+function deletePerson(id){
+  if(!confirm('¿Eliminar persona?')) return;
+  DB.people=DB.people.filter(p=>p.id!==id);
+  save(); renderPeople();
+}
+
+// ─────────────────────────────────────────
+//  SISTEMA DE ALERTAS (15 días)
+// ─────────────────────────────────────────
+const ALERT_DAYS = 15;
+const DISMISS_KEY = 'flotaapp_alerts_dismissed';
+
+function getAlerts(){
+  const now = new Date();
+  const alerts = [];
+  DB.vehicles.forEach(v => {
+    const checks = [
+      { field: 'itv',         label: 'ITV' },
+      { field: 'maintenance', label: 'Mantenimiento' },
+      { field: 'review',      label: 'Revisión' },
+    ];
+    checks.forEach(({ field, label }) => {
+      if (!v[field]) return;
+      const date  = new Date(v[field]);
+      const days  = Math.ceil((date - now) / 86400000);
+      if (days <= ALERT_DAYS) {
+        alerts.push({
+          vehicleId: v.id,
+          vehName:   v.name,
+          plate:     v.plate,
+          field,
+          label,
+          date:      v[field],
+          days,
+          expired:   days < 0,
+          technicianId: v.technicianId || null,
+        });
+      }
+    });
+  });
+  // Ordenar: vencidas primero, luego por días
+  alerts.sort((a,b) => a.days - b.days);
+  return alerts;
+}
+
+function renderAlertBanner(){
+  // Comprobar si el usuario descartó las alertas hoy
+  const dismissed = localStorage.getItem(DISMISS_KEY);
+  const today = new Date().toISOString().slice(0,10);
+  if (dismissed === today) return;
+
+  const alerts = getAlerts();
+  const banner  = document.getElementById('alert-banner');
+  const itemsEl = document.getElementById('alert-items');
+  if (!alerts.length) { banner.classList.remove('has-alerts'); return; }
+
+  itemsEl.innerHTML = alerts.map(a => {
+    const cls  = a.expired ? 'critical' : 'warning';
+    const icon = a.expired ? '🔴' : '🟠';
+    const txt  = a.expired
+      ? `Vencida hace ${Math.abs(a.days)}d`
+      : a.days === 0 ? 'Vence HOY' : `${a.days}d`;
+    return `<div class="alert-item ${cls}" onclick="handleAlertClick('${a.vehicleId}')" title="${a.vehName} · ${a.label}: ${fmtDate(a.date)}">
+      ${icon} <b>${a.vehName.split(' ')[0]}</b> · ${a.label} · ${txt}
+      ${a.technicianId ? `<button onclick="event.stopPropagation();sendReminderEmail('${a.vehicleId}')" style="background:rgba(255,255,255,.1);border:none;border-radius:4px;cursor:pointer;padding:1px 5px;font-size:.72rem;color:inherit;margin-left:.25rem" title="Enviar recordatorio">📧</button>` : ''}
+    </div>`;
+  }).join('');
+
+  banner.classList.add('has-alerts');
+}
+
+function handleAlertClick(vehId){
+  switchPage('vehicles');
+}
+
+function dismissAlerts(){
+  const today = new Date().toISOString().slice(0,10);
+  localStorage.setItem(DISMISS_KEY, today);
+  document.getElementById('alert-banner').classList.remove('has-alerts');
+}
+
+// Mostrar notificación del navegador si el usuario da permiso
+function requestNotificationPermission(){
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'default'){
+    Notification.requestPermission();
+  }
+}
+
+function showBrowserNotifications(){
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const alerts = getAlerts();
+  if (!alerts.length) return;
+  // Agrupar por vehículo para no spamear
+  const byVeh = {};
+  alerts.forEach(a => {
+    if (!byVeh[a.vehicleId]) byVeh[a.vehicleId] = [];
+    byVeh[a.vehicleId].push(a);
+  });
+  Object.values(byVeh).forEach(list => {
+    const v = list[0];
+    const lines = list.map(a =>
+      a.expired ? `${a.label}: VENCIDA` : `${a.label}: ${a.days}d`
+    ).join(' · ');
+    new Notification(`⚠ ${v.vehName} (${v.plate})`, {
+      body: lines,
+      icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><text y="26" font-size="26">🚗</text></svg>',
+      tag:  'flota-' + v.vehicleId,
+    });
+  });
+}
+
+// ─────────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────────
+renderCalendar();
+renderStats();
+renderAlertBanner();
+requestNotificationPermission();
+// Mostrar notificaciones del navegador 2s después de cargar
+setTimeout(showBrowserNotifications, 2000);
+</script>
+</body>
+</html>
