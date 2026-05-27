@@ -380,28 +380,63 @@ const VEH_COLORS = ['#4f8ef7','#6ee7b7','#f97316','#c084fc'];
 const PER_COLORS = ['#4f8ef7','#6ee7b7','#f97316','#c084fc','#f43f5e'];
 
 // ─────────────────────────────────────────
-//  DATA
+//  DATA  (API servidor compartida)
 // ─────────────────────────────────────────
-const SK = 'flotaapp_v4';
-let DB = (() => {
-  try { const r = localStorage.getItem(SK); if(r) return JSON.parse(r); } catch(e){}
-  return {
-    vehicles:[
-      {id:'v1',name:'Kangoo',plate:'1234 ABC',year:2007,review:'2027-02-01',km:null,itv:'2027-02-10',maintenance:'2027-07-15',technicianId:'p2'},
-      {id:'v2',name:'Duster',plate:'5678 DEF',year:2022,review:'2027-01-15',km:85000,itv:'2027-06-20',maintenance:'2027-01-14',technicianId:'p2'},
-      {id:'v3',name:'Suzuki',plate:'9012 GHI',year:2019,review:'2027-01-30',km:110000,itv:'2027-01-05',maintenance:'2027-01-10',technicianId:'p2'},
-    ],
-    people:[
-      {id:'p1',name:'Igor',role:'Técnico',email:''},
-      {id:'p2',name:'Manu',role:'Técnico',email:''},
-      {id:'p3',name:'Pablo',role:'Técnico',email:''},
-      {id:'p4',name:'Nahia',role:'Técnico',email:''},
-      {id:'p5',name:'Xabi',role:'Técnico',email:''},
-    ],
-    reservations:[]
-  };
-})();
-function save(){ localStorage.setItem(SK, JSON.stringify(DB)); }
+const API = '/api/data';
+const SEED = {
+  vehicles:[
+    {id:'v1',name:'Kangoo',plate:'1234 ABC',year:2007,review:'2027-02-01',km:null,itv:'2027-02-10',maintenance:'2027-07-15',technicianId:'p2'},
+    {id:'v2',name:'Duster',plate:'5678 DEF',year:2022,review:'2027-01-15',km:85000,itv:'2027-06-20',maintenance:'2027-01-14',technicianId:'p2'},
+    {id:'v3',name:'Suzuki',plate:'9012 GHI',year:2019,review:'2027-01-30',km:110000,itv:'2027-01-05',maintenance:'2027-01-10',technicianId:'p2'},
+  ],
+  people:[
+    {id:'p1',name:'Igor',role:'Técnico',email:''},
+    {id:'p2',name:'Manu',role:'Técnico',email:''},
+    {id:'p3',name:'Pablo',role:'Técnico',email:''},
+    {id:'p4',name:'Nahia',role:'Técnico',email:''},
+    {id:'p5',name:'Xabi',role:'Técnico',email:''},
+  ],
+  reservations:[]
+};
+
+let DB = JSON.parse(JSON.stringify(SEED)); // datos iniciales mientras carga
+
+async function loadDB(){
+  try {
+    const r = await fetch(API);
+    if(!r.ok) throw new Error('sin datos');
+    const data = await r.json();
+    // Si el servidor devuelve vacío usa el seed
+    if(!data.vehicles || !data.vehicles.length){
+      DB = JSON.parse(JSON.stringify(SEED));
+      await saveDB();
+    } else {
+      DB = data;
+    }
+  } catch(e){
+    console.warn('API no disponible, usando datos locales:', e);
+    DB = JSON.parse(JSON.stringify(SEED));
+  }
+  renderPage(currentPage);
+  renderAlertBanner();
+  requestNotificationPermission();
+  setTimeout(showBrowserNotifications, 2000);
+}
+
+async function saveDB(){
+  try {
+    await fetch(API, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(DB)
+    });
+  } catch(e){
+    console.warn('No se pudo guardar en servidor:', e);
+  }
+}
+
+// Alias para compatibilidad con el resto del código
+function save(){ saveDB(); }
 
 // ─────────────────────────────────────────
 //  HELPERS
@@ -1146,10 +1181,7 @@ function showBrowserNotifications(){
 // ─────────────────────────────────────────
 renderCalendar();
 renderStats();
-renderAlertBanner();
-requestNotificationPermission();
-// Mostrar notificaciones del navegador 2s después de cargar
-setTimeout(showBrowserNotifications, 2000);
+loadDB(); // carga datos del servidor y re-renderiza
 </script>
 </body>
 </html>
